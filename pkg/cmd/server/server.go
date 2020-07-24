@@ -10,6 +10,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/ad3n/grpc-rest-todo/pkg/protocol/grpc"
+	"github.com/ad3n/grpc-rest-todo/pkg/protocol/rest"
 	v1 "github.com/ad3n/grpc-rest-todo/pkg/service/v1"
 )
 
@@ -18,6 +19,10 @@ type Config struct {
 	// gRPC server start parameters section
 	// gRPC is TCP port to listen by gRPC server
 	GRPCPort string
+
+	// HTTP/REST gateway start parameters section
+	// HTTPPort is TCP port to listen by HTTP/REST gateway
+	HTTPPort string
 
 	// DB Datastore parameters section
 	// DatastoreDBHost is host of database
@@ -37,6 +42,7 @@ func RunServer() error {
 	// get configuration
 	var cfg Config
 	flag.StringVar(&cfg.GRPCPort, "grpc-port", "", "gRPC port to bind")
+	flag.StringVar(&cfg.HTTPPort, "http-port", "", "HTTP port to bind")
 	flag.StringVar(&cfg.DatastoreDBHost, "db-host", "", "Database host")
 	flag.StringVar(&cfg.DatastoreDBUser, "db-user", "", "Database user")
 	flag.StringVar(&cfg.DatastoreDBPassword, "db-password", "", "Database password")
@@ -47,23 +53,26 @@ func RunServer() error {
 		return fmt.Errorf("invalid TCP port for gRPC server: '%s'", cfg.GRPCPort)
 	}
 
+	if len(cfg.HTTPPort) == 0 {
+		return fmt.Errorf("invalid TCP port for HTTP gateway: '%s'", cfg.HTTPPort)
+	}
+
 	// add MySQL driver specific parameter to parse date/time
 	// Drop it for another database
 	param := "parseTime=true"
-
-	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?%s",
-		cfg.DatastoreDBUser,
-		cfg.DatastoreDBPassword,
-		cfg.DatastoreDBHost,
-		cfg.DatastoreDBSchema,
-		param)
+	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?%s", cfg.DatastoreDBUser, cfg.DatastoreDBPassword, cfg.DatastoreDBHost, cfg.DatastoreDBSchema, param)
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %v", err)
 	}
+
 	defer db.Close()
 
 	v1API := v1.NewToDoServiceServer(db)
+
+	go func() {
+		_ = rest.RunServer(ctx, cfg.GRPCPort, cfg.HTTPPort)
+	}()
 
 	return grpc.RunServer(ctx, v1API, cfg.GRPCPort)
 }
