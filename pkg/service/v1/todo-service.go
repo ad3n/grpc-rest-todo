@@ -68,16 +68,16 @@ func (s *toDoServiceServer) Create(ctx context.Context, req *v1.CreateRequest) (
 	}
 
 	// insert ToDo entity data
-	res, err := c.ExecContext(ctx, "INSERT INTO ToDo(`Title`, `Description`, `Reminder`) VALUES(?, ?, ?)",
+	res, err := c.ExecContext(ctx, "INSERT INTO todo(`Title`, `Description`, `Reminder`) VALUES(?, ?, ?)",
 		req.Todo.Title, req.Todo.Description, reminder)
 	if err != nil {
-		return nil, status.Error(codes.Unknown, "failed to insert into ToDo-> "+err.Error())
+		return nil, status.Error(codes.Unknown, "failed to insert into todo-> "+err.Error())
 	}
 
 	// get ID of creates ToDo
 	id, err := res.LastInsertId()
 	if err != nil {
-		return nil, status.Error(codes.Unknown, "failed to retrieve id for created ToDo-> "+err.Error())
+		return nil, status.Error(codes.Unknown, "failed to retrieve id for created todo-> "+err.Error())
 	}
 
 	return &v1.CreateResponse{
@@ -101,18 +101,18 @@ func (s *toDoServiceServer) Read(ctx context.Context, req *v1.ReadRequest) (*v1.
 	defer c.Close()
 
 	// query ToDo by ID
-	rows, err := c.QueryContext(ctx, "SELECT `ID`, `Title`, `Description`, `Reminder` FROM ToDo WHERE `ID`=?",
+	rows, err := c.QueryContext(ctx, "SELECT `ID`, `Title`, `Description`, `Reminder` FROM todo WHERE `ID`=?",
 		req.Id)
 	if err != nil {
-		return nil, status.Error(codes.Unknown, "failed to select from ToDo-> "+err.Error())
+		return nil, status.Error(codes.Unknown, "failed to select from todo-> "+err.Error())
 	}
 	defer rows.Close()
 
 	if !rows.Next() {
 		if err := rows.Err(); err != nil {
-			return nil, status.Error(codes.Unknown, "failed to retrieve data from ToDo-> "+err.Error())
+			return nil, status.Error(codes.Unknown, "failed to retrieve data from todo-> "+err.Error())
 		}
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("ToDo with ID='%d' is not found",
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("todo with ID='%d' is not found",
 			req.Id))
 	}
 
@@ -120,7 +120,7 @@ func (s *toDoServiceServer) Read(ctx context.Context, req *v1.ReadRequest) (*v1.
 	var td v1.ToDo
 	var reminder time.Time
 	if err := rows.Scan(&td.Id, &td.Title, &td.Description, &reminder); err != nil {
-		return nil, status.Error(codes.Unknown, "failed to retrieve field values from ToDo row-> "+err.Error())
+		return nil, status.Error(codes.Unknown, "failed to retrieve field values from todo row-> "+err.Error())
 	}
 	td.Reminder, err = ptypes.TimestampProto(reminder)
 	if err != nil {
@@ -128,7 +128,7 @@ func (s *toDoServiceServer) Read(ctx context.Context, req *v1.ReadRequest) (*v1.
 	}
 
 	if rows.Next() {
-		return nil, status.Error(codes.Unknown, fmt.Sprintf("found multiple ToDo rows with ID='%d'",
+		return nil, status.Error(codes.Unknown, fmt.Sprintf("found multiple todo rows with ID='%d'",
 			req.Id))
 	}
 
@@ -159,10 +159,10 @@ func (s *toDoServiceServer) Update(ctx context.Context, req *v1.UpdateRequest) (
 	}
 
 	// update ToDo
-	res, err := c.ExecContext(ctx, "UPDATE ToDo SET `Title`=?, `Description`=?, `Reminder`=? WHERE `ID`=?",
+	res, err := c.ExecContext(ctx, "UPDATE todo SET `Title`=?, `Description`=?, `Reminder`=? WHERE `ID`=?",
 		req.Todo.Title, req.Todo.Description, reminder, req.Todo.Id)
 	if err != nil {
-		return nil, status.Error(codes.Unknown, "failed to update ToDo-> "+err.Error())
+		return nil, status.Error(codes.Unknown, "failed to update todo-> "+err.Error())
 	}
 
 	rows, err := res.RowsAffected()
@@ -171,7 +171,7 @@ func (s *toDoServiceServer) Update(ctx context.Context, req *v1.UpdateRequest) (
 	}
 
 	if rows == 0 {
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("ToDo with ID='%d' is not found",
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("todo with ID='%d' is not found",
 			req.Todo.Id))
 	}
 
@@ -196,9 +196,9 @@ func (s *toDoServiceServer) Delete(ctx context.Context, req *v1.DeleteRequest) (
 	defer c.Close()
 
 	// delete ToDo
-	res, err := c.ExecContext(ctx, "DELETE FROM ToDo WHERE `ID`=?", req.Id)
+	res, err := c.ExecContext(ctx, "DELETE FROM todo WHERE `ID`=?", req.Id)
 	if err != nil {
-		return nil, status.Error(codes.Unknown, "failed to delete ToDo-> "+err.Error())
+		return nil, status.Error(codes.Unknown, "failed to delete todo-> "+err.Error())
 	}
 
 	rows, err := res.RowsAffected()
@@ -207,7 +207,7 @@ func (s *toDoServiceServer) Delete(ctx context.Context, req *v1.DeleteRequest) (
 	}
 
 	if rows == 0 {
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("ToDo with ID='%d' is not found",
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("todo with ID='%d' is not found",
 			req.Id))
 	}
 
@@ -232,9 +232,9 @@ func (s *toDoServiceServer) ReadAll(ctx context.Context, req *v1.ReadAllRequest)
 	defer c.Close()
 
 	// get ToDo list
-	rows, err := c.QueryContext(ctx, "SELECT `ID`, `Title`, `Description`, `Reminder` FROM ToDo")
+	rows, err := c.QueryContext(ctx, "SELECT `ID`, `Title`, `Description`, `Reminder` FROM todo")
 	if err != nil {
-		return nil, status.Error(codes.Unknown, "failed to select from ToDo-> "+err.Error())
+		return nil, status.Error(codes.Unknown, "failed to select from todo-> "+err.Error())
 	}
 	defer rows.Close()
 
@@ -243,7 +243,7 @@ func (s *toDoServiceServer) ReadAll(ctx context.Context, req *v1.ReadAllRequest)
 	for rows.Next() {
 		td := new(v1.ToDo)
 		if err := rows.Scan(&td.Id, &td.Title, &td.Description, &reminder); err != nil {
-			return nil, status.Error(codes.Unknown, "failed to retrieve field values from ToDo row-> "+err.Error())
+			return nil, status.Error(codes.Unknown, "failed to retrieve field values from todo row-> "+err.Error())
 		}
 		td.Reminder, err = ptypes.TimestampProto(reminder)
 		if err != nil {
@@ -253,7 +253,7 @@ func (s *toDoServiceServer) ReadAll(ctx context.Context, req *v1.ReadAllRequest)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, status.Error(codes.Unknown, "failed to retrieve data from ToDo-> "+err.Error())
+		return nil, status.Error(codes.Unknown, "failed to retrieve data from todo-> "+err.Error())
 	}
 
 	return &v1.ReadAllResponse{
